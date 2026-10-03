@@ -1,0 +1,60 @@
+# 気象庁に新しい地上天気図が出たら、ページ(GitHub Pages)を作り直す。
+# 15分ごとに調べ、変わっていなければ数秒で終わる。手動実行で「force」を付けると必ず作り直す。
+name: update
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "変わっていなくても作り直す"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 新しい図が出たか調べる
+        id: check
+        env:
+          FORCE: ${{ inputs.force }}
+        run: python build_site.py --check
+      - name: ライブラリを入れる
+        if: steps.check.outputs.changed == 'true'
+        run: pip install -r requirements.txt
+      - name: ページを作る
+        if: steps.check.outputs.changed == 'true'
+        run: python build_site.py
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.check.outputs.changed == 'true'
+        with:
+          path: site
+      - name: 公開する
+        id: deploy
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/deploy-pages@v4
+      # 60日間リポジトリに変更がないと、時刻指定の実行が止まるため、この設定を有効にし直しておく
+      - name: 自動実行を止めないようにする
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/update.yml/enable"
