@@ -25,6 +25,9 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 385e8c929e084a811dcd4a0999cf0b2e
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -52,6 +55,13 @@ jobs:
         id: deploy
         if: steps.check.outputs.changed == 'true'
         uses: actions/deploy-pages@v4
+      # 同じページを Cloudflare Pages(https://narabete-tenkizu.pages.dev/)にも出す。合鍵(CLOUDFLARE_API_TOKEN)がないときは飛ばす
+      - name: Cloudflare Pages にも公開する
+        continue-on-error: true
+        if: steps.check.outputs.changed == 'true' && env.CLOUDFLARE_API_TOKEN != ''
+        run: |
+          npx --yes wrangler@4.20.0 pages project create narabete-tenkizu --production-branch=main || true
+          npx --yes wrangler@4.20.0 pages deploy site --project-name=narabete-tenkizu --branch=main --commit-dirty=true
       # 60日間リポジトリに変更がないと、時刻指定の実行が止まるため、この設定を有効にし直しておく
       - name: 自動実行を止めないようにする
         if: steps.check.outputs.changed == 'true'
