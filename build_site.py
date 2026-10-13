@@ -12,7 +12,7 @@ import sys
 import urllib.request
 from datetime import timedelta
 
-SITE_URL = os.environ.get("SITE_URL", "https://naokishobosai0214-dot.github.io/")
+SITE_URL = os.environ.get("SITE_URL", "https://narabete-tenkizu.pages.dev/")
 LIST = "https://www.jma.go.jp/bosai/weather_map/data/list.json"
 HERE = os.path.dirname(os.path.abspath(__file__))
 SITE = os.path.join(HERE, "site")
