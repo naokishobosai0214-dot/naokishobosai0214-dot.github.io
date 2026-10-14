@@ -1,5 +1,5 @@
 """気象庁の地上天気図(白黒)を並べて表示する。
-24時間前・12時間前・最新のASAS と、24時間予想(FSAS24)・48時間予想(FSAS48)。
+48時間前・24時間前・最新のASAS と、24時間予想(FSAS24)・48時間予想(FSAS48)。最新は FSAS の初期値(00/12UTC)にそろえる。色は付けず気象庁の白黒図のまま。
 使い方: python -X utf8 asas_view.py
 """
 import json
@@ -69,9 +69,13 @@ def to_array(pix):
     return np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)[:, :, :3]
 
 
-def render(url, png, color_url):
+def render(url, png, color_url=None):
+    """PDF を画像にする。color_url を渡したときだけ陸地とH・Lの色を重ねる(ならべて天気図は気象庁の白黒図のまま)。"""
     doc = pymupdf.open(stream=get(url), filetype="pdf")
     pix = doc[0].get_pixmap(dpi=DPI)
+    if color_url is None:
+        pix.save(os.path.join(OUT, png))
+        return
     land = color_layer(color_url)
     # 白黒の図に陸地とH・Lの色を重ねる(線は黒のまま残る)
     out = np.minimum(to_array(pix), to_array(land))
@@ -79,21 +83,29 @@ def render(url, png, color_url):
     pymupdf.Pixmap(pymupdf.csRGB, pix.width, pix.height, out.tobytes(), False).save(os.path.join(OUT, png))
 
 
+def fsas_init(lst):
+    """FSAS24・48 の初期値(UTC)。2枚の初期値がそろっていなければ None(FSAS48 は FSAS24 より約2時間遅れて出る)。"""
+    i24, i48 = (valid_time(lst[f"ft{ft}"][-1]) for ft in (24, 48))
+    return i48 if i24 == i48 else None
+
+
 def fetch_charts():
-    """5枚(24時間前・12時間前・最新のASAS、FSAS24・48)を描いて、(見出し, 時刻, ファイル名) のリストを返す。"""
+    """5枚を描いて、(見出し, 時刻, ファイル名) のリストを返す。
+    並びは ASAS 48時間前・24時間前・最新、FSAS24・48。ASAS の「最新」は FSAS の初期値(00UTC か 12UTC)と同じ時刻にそろえる。"""
     os.makedirs(OUT, exist_ok=True)
     lst = json.loads(get(LIST))["asia_monochrome"]
-    latest = valid_time(lst["now"][-1])
+    init = fsas_init(lst)
+    if init is None:
+        raise RuntimeError("FSAS24 と FSAS48 の初期値がそろっていません(FSAS48 の掲載待ち)")
     charts = []
-    for back, label in ((24, "24時間前"), (12, "12時間前"), (0, "最新")):
-        t = latest - timedelta(hours=back)
+    for back, label in ((48, "48時間前"), (24, "24時間前"), (0, "最新")):
+        t = init - timedelta(hours=back)
         png = f"asas_{t:%Y%m%d%H}.png"
-        render(f"{BASE}{t:%Y%m}/ASAS_MONO_{t:%Y%m%d%H%M}.pdf", png, f"{BASE}{t:%Y%m}/ASAS_COLOR_{t:%Y%m%d%H%M}.pdf")
+        render(f"{BASE}{t:%Y%m}/ASAS_MONO_{t:%Y%m%d%H%M}.pdf", png)
         charts.append((f"ASAS {label}", jst(t), png))
     for ft in (24, 48):
-        init = valid_time(lst[f"ft{ft}"][-1])
         png = f"fsas{ft}_{init:%Y%m%d%H}.png"
-        render(f"{BASE}FSAS{ft}_MONO_ASIA.pdf", png, f"{BASE}FSAS{ft}_COLOR_ASIA.pdf")
+        render(f"{BASE}FSAS{ft}_MONO_ASIA.pdf", png)
         charts.append((f"FSAS{ft} {ft}時間予想", jst(init + timedelta(hours=ft)) + f" 初期値 {init:%d}日{init:%H}UTC", png))
     return charts
 
