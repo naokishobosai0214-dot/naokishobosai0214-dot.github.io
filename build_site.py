@@ -128,9 +128,9 @@ PAGE = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ならべて天気図</title>
+<title>空読み｜天気図を、時の流れで読む</title>
 <meta name="description" content="地上天気図の48時間前・24時間前・最新・24時間予想・48時間予想を1枚にまとめて、1日2回（9時・21時の図）お届け。1枚ずつ保存して見比べる手間をなくします。">
-<meta property="og:title" content="ならべて天気図">
+<meta property="og:title" content="空読み（そらよみ）">
 <meta property="og:description" content="地上天気図 5枚まとめ(最新 __STAMP__)">
 <meta property="og:image" content="latest.jpg?v=__V__">
 <meta name="twitter:card" content="summary_large_image">
@@ -156,26 +156,58 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:"BIZ UDPGothic","
 a{color:var(--accent)}
 .wrap{max-width:1080px;margin:0 auto;padding:0 16px}
 
-/* ヒーロー */
-.hero{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--sky1) 0%,var(--sky2) 55%,var(--sky3) 100%);color:#fff;padding:22px 0 88px}
-.brand{display:flex;align-items:center;gap:8px;font-weight:bold;font-size:18px;letter-spacing:.05em;position:relative;z-index:2}
+/* ヒーロー(時刻に合わせた空: 朝・昼・夕方・夜) */
+.hero{position:relative;overflow:hidden;background:#0c1a36;color:#fff;padding:22px 0 210px;isolation:isolate}
+.sky{position:absolute;inset:0;z-index:-3;opacity:0;transition:opacity 1.6s ease}
+.hero[data-sky=morning] .s-morning,.hero[data-sky=day] .s-day,.hero[data-sky=evening] .s-evening,.hero[data-sky=night] .s-night{opacity:1}
+.s-night{background:linear-gradient(180deg,#040916 0%,#0a1630 45%,#172a4e 100%)}
+.s-night::after{content:"";position:absolute;right:16%;top:30%;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 38% 36%,#fffdf4 0%,#ece6cf 62%,#d8d1b8 100%);box-shadow:0 0 50px 14px rgba(244,241,228,.14);opacity:.9}
+.s-morning{background:radial-gradient(90% 60% at 20% 105%,rgba(255,236,190,.95) 0%,rgba(255,205,160,.6) 30%,rgba(255,205,160,0) 62%),linear-gradient(180deg,#2d4f86 0%,#6b7fb0 34%,#b8a3c4 60%,#f2c3ad 82%,#fde7c6 100%)}
+.s-day{background:radial-gradient(60% 55% at 82% 0%,rgba(255,255,255,.55) 0%,rgba(255,255,255,0) 60%),linear-gradient(180deg,#1a5aa6 0%,#3480c8 42%,#86bde8 82%,#c9e3f6 100%)}
+.s-evening{background:radial-gradient(110% 70% at 84% 110%,rgba(255,170,90,.95) 0%,rgba(240,110,70,.55) 32%,rgba(240,110,70,0) 64%),linear-gradient(180deg,#121838 0%,#352a5a 34%,#83405f 60%,#d8673f 84%,#f3ad66 100%)}
+#stars{position:absolute;inset:0;z-index:-2;width:100%;height:100%;opacity:0;transition:opacity 1.6s ease}
+.hero[data-sky=night] #stars{opacity:1}
+.hero[data-sky=morning] #stars{opacity:.25}
+/* 山(北アルプスの稜線を重ねた風景画)と雲海。色は時刻で変わる */
+.hero{--far:#8fb4d6;--mid:#4f7aa6;--near:#23405e;--rim:rgba(255,255,255,.85);--sea:#ffffff;--sea-op:.75}
+.hero[data-sky=morning]{--far:#9a93b8;--mid:#565a86;--near:#1f2442;--rim:rgba(255,196,168,.95);--sea:#ffe6da;--sea-op:.7}
+.hero[data-sky=evening]{--far:#a3788f;--mid:#5b3f62;--near:#21172e;--rim:rgba(255,150,92,.95);--sea:#ffcfb0;--sea-op:.5}
+.hero[data-sky=night]{--far:#1f2d4c;--mid:#131d35;--near:#070c18;--rim:rgba(205,215,245,.4);--sea:#a8b6d6;--sea-op:.16}
+.mtn{position:absolute;left:0;right:0;bottom:0;height:62%;z-index:-1;pointer-events:none}
+.mtn svg{position:absolute;left:0;bottom:0;width:100%;height:100%;will-change:transform}
+.mtn path{transition:fill 1.6s ease,stroke 1.6s ease}
+.mtn .far path{fill:var(--far)}
+.mtn .mid path.body{fill:var(--mid)}
+.mtn .mid path.rim{fill:none;stroke:var(--rim);stroke-width:1.6;stroke-linejoin:round}
+.mtn .near path{fill:var(--near)}
+.sea{position:absolute;left:0;width:200%;pointer-events:none;will-change:transform;opacity:var(--sea-op);transition:opacity 1.6s ease;
+  background-repeat:repeat-x;filter:blur(10px);animation:sea linear infinite}
+.sea.s1{bottom:21%;height:22%;background-size:50% 100%;animation-duration:150s;
+  background-image:radial-gradient(28% 40% at 12% 60%,var(--sea),transparent 70%),radial-gradient(22% 34% at 40% 45%,var(--sea),transparent 70%),radial-gradient(30% 42% at 72% 62%,var(--sea),transparent 70%),radial-gradient(18% 30% at 92% 50%,var(--sea),transparent 70%)}
+.sea.s2{bottom:7%;height:20%;background-size:50% 100%;animation-duration:230s;animation-direction:reverse;
+  background-image:radial-gradient(32% 44% at 22% 55%,var(--sea),transparent 70%),radial-gradient(26% 38% at 58% 62%,var(--sea),transparent 70%),radial-gradient(24% 36% at 86% 48%,var(--sea),transparent 70%)}
+@keyframes sea{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:90px;z-index:-1;background:linear-gradient(180deg,rgba(0,0,0,0),var(--bg))}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;position:relative}
+.brand{display:flex;align-items:center;gap:8px;font-weight:bold;font-size:18px;letter-spacing:.08em}
 .brand svg{width:28px;height:28px}
-.sun{position:absolute;top:-60px;right:-40px;width:260px;height:260px;z-index:0}
-.sun circle{fill:var(--sun)}
-.sun .rays{stroke:var(--sun);stroke-width:6;stroke-linecap:round;opacity:.55;transform-origin:130px 130px;animation:spin 60s linear infinite}
-.cloud{position:absolute;fill:var(--cloud);opacity:.9;z-index:1;animation:drift linear infinite}
-.cloud.a{width:180px;top:110px;left:-200px;animation-duration:70s}
-.cloud.b{width:120px;top:40px;left:-140px;animation-duration:95s;animation-delay:-40s;opacity:.7}
-.cloud.c{width:220px;bottom:24px;left:-240px;animation-duration:85s;animation-delay:-20s;opacity:.8}
-@keyframes drift{from{transform:translateX(0)}to{transform:translateX(calc(100vw + 260px))}}
-@keyframes spin{to{transform:rotate(360deg)}}
-.hero-body{position:relative;z-index:2;margin-top:48px;max-width:640px}
-.hero h1{font-size:clamp(28px,6vw,46px);line-height:1.3;margin:0 0 14px;text-shadow:0 2px 12px rgba(10,60,110,.25)}
-.hero .lead{font-size:clamp(15px,2.6vw,18px);margin:0 0 22px;text-shadow:0 1px 8px rgba(10,60,110,.25)}
-.badge{display:inline-block;background:rgba(255,255,255,.92);color:#17324d;border-radius:999px;padding:4px 14px;font-size:14px;margin-bottom:18px}
-.badge b{color:var(--now)}
+.nm{font-size:22px;letter-spacing:.18em;font-weight:bold}
+.nm small{font-size:10px;letter-spacing:.32em;font-weight:normal;opacity:.75;margin-left:10px;vertical-align:middle}
+.clock{text-align:right;line-height:1.15;text-shadow:0 1px 10px rgba(0,0,0,.25)}
+.clock .ct{font-size:44px;letter-spacing:.06em;font-variant-numeric:tabular-nums;font-weight:300}
+.clock .cd{font-size:13px;letter-spacing:.12em;opacity:.85;margin-top:4px}
+.hero-body{position:relative;margin-top:40px;max-width:660px}
+.hero h1{font-size:clamp(28px,6vw,46px);line-height:1.3;margin:0 0 14px;letter-spacing:.02em;text-shadow:0 2px 16px rgba(0,0,0,.28)}
+.hero .lead{font-size:clamp(15px,2.6vw,18px);margin:0 0 24px;text-shadow:0 1px 10px rgba(0,0,0,.3);opacity:.95}
+.badge{display:inline-block;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(6px);border-radius:999px;padding:4px 14px;font-size:14px;margin-bottom:18px}
+.badge b{color:#fff}
 .cta{display:inline-block;background:var(--accent2);color:#fff;font-weight:bold;font-size:17px;padding:14px 28px;border-radius:999px;text-decoration:none;box-shadow:0 6px 18px rgba(255,140,0,.35)}
+.hero .cta{background:#fff;color:#0f2a4a;box-shadow:0 8px 24px rgba(0,0,0,.22)}
 .cta:hover{filter:brightness(1.05)}
+.skytest{position:absolute;right:16px;bottom:120px;display:none;gap:6px;z-index:2}
+.skytest.on{display:flex}
+.skytest button{font:inherit;font-size:12px;padding:5px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.25);color:#fff;cursor:pointer}
+.skytest button.sel{background:#fff;color:#0f2a4a}
 
 /* セクション */
 section{padding:56px 0 8px}
@@ -282,55 +314,102 @@ footer .brand{color:var(--fg);font-size:15px;margin-bottom:6px}
 @media (max-width:760px){
   .pair,.who,.steps{grid-template-columns:1fr}
   .steps{gap:26px}
-  .sun{width:190px;height:190px;top:-50px;right:-50px}
+  .clock .ct{font-size:30px}
+  .clock .cd{font-size:11px;letter-spacing:.04em}
+  .brand{font-size:16px}
   .hero{padding-bottom:76px}
   .hero-body{margin-top:30px}
 }
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
-  .cloud,.sun .rays{animation:none}
-  .cloud.a{left:8%}.cloud.b{left:45%}.cloud.c{left:62%}
+  .sea{animation:none}
 }
 </style>
 </head>
 <body>
 
-<header class="hero">
-  <svg class="sun" viewBox="0 0 260 260" aria-hidden="true">
-    <g class="rays">
-      <line x1="130" y1="10" x2="130" y2="40"/><line x1="130" y1="220" x2="130" y2="250"/>
-      <line x1="10" y1="130" x2="40" y2="130"/><line x1="220" y1="130" x2="250" y2="130"/>
-      <line x1="45" y1="45" x2="66" y2="66"/><line x1="194" y1="194" x2="215" y2="215"/>
-      <line x1="45" y1="215" x2="66" y2="194"/><line x1="194" y1="66" x2="215" y2="45"/>
-    </g>
-    <circle cx="130" cy="130" r="62"/>
-  </svg>
-  <svg class="cloud a" viewBox="0 0 200 100" aria-hidden="true"><path d="M50 90h110a30 30 0 0 0 0-60 42 42 0 0 0-78-8A34 34 0 0 0 50 90z"/></svg>
-  <svg class="cloud b" viewBox="0 0 200 100" aria-hidden="true"><path d="M50 90h110a30 30 0 0 0 0-60 42 42 0 0 0-78-8A34 34 0 0 0 50 90z"/></svg>
-  <svg class="cloud c" viewBox="0 0 200 100" aria-hidden="true"><path d="M50 90h110a30 30 0 0 0 0-60 42 42 0 0 0-78-8A34 34 0 0 0 50 90z"/></svg>
+<header class="hero" data-sky="day">
+  <div class="sky s-morning"></div><div class="sky s-day"></div><div class="sky s-evening"></div><div class="sky s-night"></div>
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="mtn" aria-hidden="true">
+    <svg class="far" viewBox="0 0 1600 400" preserveAspectRatio="xMidYMax slice"><path d="M0 250L70 228L140 240L215 205L290 222L360 190L430 212L520 172L600 196L680 162L745 182L820 150L890 176L965 142L1045 168L1125 146L1205 180L1285 158L1365 186L1445 166L1525 196L1600 178V400H0Z"/></svg>
+    <div class="sea s1"></div>
+    <svg class="mid" viewBox="0 0 1600 400" preserveAspectRatio="xMidYMax slice"><path class="body" d="M0 300L90 282L170 290L260 262L330 274L410 236L470 196L500 172L530 194L590 240L660 252L740 230L800 244L880 214L940 226L1000 196L1050 178L1075 146L1090 104L1098 78L1106 104L1120 146L1150 166L1190 156L1222 138L1246 146L1268 124L1290 140L1312 116L1334 132L1360 122L1392 150L1440 180L1500 200L1560 220L1600 230V400H0Z"/><path class="rim" d="M410 236L470 196L500 172L530 194L590 240M1000 196L1050 178L1075 146L1090 104L1098 78L1106 104L1120 146L1150 166L1190 156L1222 138L1246 146L1268 124L1290 140L1312 116L1334 132L1360 122L1392 150L1440 180"/></svg>
+    <div class="sea s2"></div>
+    <svg class="near" viewBox="0 0 1600 400" preserveAspectRatio="xMidYMax slice"><path d="M0 340C150 318 260 330 400 312S640 290 800 318S1080 340 1240 312S1480 296 1600 318V400H0Z"/></svg>
+  </div>
   <div class="wrap">
-    <div class="brand">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="7" width="8" height="18" rx="2" fill="#fff" opacity=".7"/><rect x="12" y="7" width="8" height="18" rx="2" fill="#fff"/><rect x="22" y="7" width="8" height="18" rx="2" fill="#fff" opacity=".7"/></svg>
-      ならべて天気図
+    <div class="top">
+      <div class="brand">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="7" width="8" height="18" rx="2" fill="#fff" opacity=".6"/><rect x="12" y="7" width="8" height="18" rx="2" fill="#fff"/><rect x="22" y="7" width="8" height="18" rx="2" fill="#fff" opacity=".6"/></svg>
+        <span class="nm">空読み<small>SORAYOMI</small></span>
+      </div>
+      <div class="clock"><div class="ct" id="ck-t">--:--</div><div class="cd" id="ck-d">日本時間</div></div>
     </div>
     <div class="hero-body">
       <span class="badge">最新の実況：<b>__STAMP__</b></span>
       <h1>天気図、もう<br>1枚ずつ並べなくていい。</h1>
       <p class="lead">地上天気図の 48時間前・24時間前・最新・24時間予想・48時間予想 を、左から右へ時間の流れどおり1枚にまとめて、1日2回お届けします。集めて並べる準備はおまかせ、あなたは解析に集中するだけ。</p>
-      <a class="cta" href="#today">今日のならべて天気図を見る</a>
+      <a class="cta" href="#today">今日の天気図を見る</a>
     </div>
   </div>
+  <div class="skytest" id="skytest"><button data-k="auto">自動</button><button data-k="morning">朝</button><button data-k="day">昼</button><button data-k="evening">夕方</button><button data-k="night">夜</button></div>
 </header>
+<script>
+(function(){
+  var hero=document.querySelector(".hero"), override=null;
+  var NAMES={morning:"朝",day:"昼",evening:"夕方",night:"夜"};
+  var fmt=new Intl.DateTimeFormat("ja-JP",{timeZone:"Asia/Tokyo",month:"numeric",day:"numeric",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false});
+  function period(h){return h>=5&&h<8?"morning":h>=8&&h<16?"day":h>=16&&h<19?"evening":"night";}
+  function tick(){
+    var p={};fmt.formatToParts(new Date()).forEach(function(x){p[x.type]=x.value;});
+    var h=parseInt(p.hour,10)%24, k=override||period(h);
+    document.getElementById("ck-t").textContent=("0"+h).slice(-2)+":"+p.minute;
+    document.getElementById("ck-d").textContent=p.month+"月"+p.day+"日("+p.weekday+")・"+NAMES[k]+"　日本時間";
+    hero.setAttribute("data-sky",k);
+  }
+  tick();setInterval(tick,10000);
+  // 試し用: URL に ?skytest を付けると 朝・昼・夕方・夜 を切り替えるボタンが出る
+  if(location.search.indexOf("skytest")>=0){
+    var box=document.getElementById("skytest");box.className+=" on";
+    var m=location.search.match(/skytest=(morning|day|evening|night)/);if(m)override=m[1];
+    box.addEventListener("click",function(e){var k=e.target.getAttribute("data-k");if(!k)return;
+      override=k==="auto"?null:k;[].forEach.call(box.children,function(b){b.classList.toggle("sel",b===e.target);});tick();});
+    tick();
+  }
+  // 星空(夜)。動きを減らす設定のときは瞬かない
+  var cv=document.getElementById("stars"),cx=cv.getContext("2d"),stars=[],still=matchMedia("(prefers-reduced-motion: reduce)").matches,shoot=null;
+  function size(){var r=window.devicePixelRatio||1;cv.width=hero.clientWidth*r;cv.height=hero.clientHeight*r;cx.setTransform(r,0,0,r,0,0);
+    stars=[];var n=Math.round(hero.clientWidth*hero.clientHeight/2600);
+    for(var i=0;i<n;i++)stars.push({x:Math.random()*hero.clientWidth,y:Math.random()*hero.clientHeight*.85,r:Math.random()*1.1+.25,a:Math.random()*.6+.3,s:Math.random()*.002+.0006,o:Math.random()*6.3});}
+  function draw(t){
+    cx.clearRect(0,0,cv.width,cv.height);
+    for(var i=0;i<stars.length;i++){var s=stars[i],a=still?s.a:s.a*(.55+.45*Math.sin(t*s.s+s.o));
+      cx.globalAlpha=a;cx.fillStyle="#fff";cx.beginPath();cx.arc(s.x,s.y,s.r,0,6.283);cx.fill();}
+    if(!still&&hero.getAttribute("data-sky")==="night"){
+      if(!shoot&&Math.random()<.003)shoot={x:Math.random()*hero.clientWidth*.7+hero.clientWidth*.2,y:Math.random()*hero.clientHeight*.3,l:0};
+      if(shoot){shoot.l+=9;var g=cx.createLinearGradient(shoot.x,shoot.y,shoot.x-shoot.l,shoot.y+shoot.l*.45);
+        g.addColorStop(0,"rgba(255,255,255,.9)");g.addColorStop(1,"rgba(255,255,255,0)");cx.globalAlpha=1;cx.strokeStyle=g;cx.lineWidth=1.4;
+        cx.beginPath();cx.moveTo(shoot.x,shoot.y);cx.lineTo(shoot.x-shoot.l,shoot.y+shoot.l*.45);cx.stroke();shoot.x+=4;shoot.y-=1.8;if(shoot.l>160)shoot=null;}
+    }
+    cx.globalAlpha=1;if(!still)requestAnimationFrame(draw);
+  }
+  size();addEventListener("resize",size);requestAnimationFrame(draw);
+  if(!still){var lay=[[".mtn .far",.08],[".mtn .mid",.16],[".mtn .near",.26]].map(function(x){return [document.querySelector(x[0]),x[1]];}),busy=false;
+    addEventListener("scroll",function(){if(busy)return;busy=true;requestAnimationFrame(function(){var y=Math.min(scrollY,hero.clientHeight);
+      lay.forEach(function(l){l[0].style.transform="translate3d(0,"+(-y*l[1])+"px,0)";});busy=false;});},{passive:true});}
+})();
+</script>
 
 <main>
 <section id="today">
   <div class="wrap"><div class="card">
-    <h2>今日のならべて天気図</h2>
+    <h2>今日の並べ図</h2>
     <p class="stamp">最新の実況：<b>__STAMP__</b>　9時・21時（数値予報の初期値と同じ時刻）の図で、予想図がそろいしだい自動で新しくなります</p>
     <a href="latest.jpg?v=__V__" target="_blank"><img class="main-img" src="latest.jpg?v=__V__" alt="地上天気図5枚まとめ（ASAS 48時間前・24時間前・最新、FSAS24・FSAS48）"></a>
     <div class="btns">
-      <a class="png" href="latest.png?v=__V__" download="narabete_tenkizu___V__.png">PNGで保存</a>
-      <a class="pdf" href="latest.pdf?v=__V__" download="narabete_tenkizu___V__.pdf">PDFで保存</a>
+      <a class="png" href="latest.png?v=__V__" download="sorayomi___V__.png">PNGで保存</a>
+      <a class="pdf" href="latest.pdf?v=__V__" download="sorayomi___V__.pdf">PDFで保存</a>
     </div>
     <p class="hint">LINEの中で保存できないときは、画像を長押しして保存するか、右上のメニューから「ブラウザで開く」を選んでください。</p>
     <h3>1枚ずつ大きく見る</h3>
@@ -341,7 +420,7 @@ footer .brand{color:var(--fg);font-size:15px;margin-bottom:6px}
 <section class="pr">
   <div class="wrap">
     <h2>集めて、並べる。その準備に時間を取られていませんか？</h2>
-    <p class="sub">本当に時間をかけたいのは、天気図を読み解くこと。準備はならべて天気図にまかせてください。</p>
+    <p class="sub">本当に時間をかけたいのは、天気図を読み解くこと。準備は空読みにまかせてください。</p>
     <div class="pair">
       <div class="card before">
         <h3>これまで</h3>
@@ -352,7 +431,7 @@ footer .brand{color:var(--fg);font-size:15px;margin-bottom:6px}
         </ul>
       </div>
       <div class="card after">
-        <h3>ならべて天気図なら</h3>
+        <h3>空読みなら</h3>
         <ul>
           <li>取り寄せ・並べ替えはおまかせ。ページを開いた瞬間から解析に入れる</li>
           <li>過去 → 最新 → 予想 が左から右へ、矢印つきで1枚に並んでいる</li>
@@ -389,7 +468,7 @@ footer .brand{color:var(--fg);font-size:15px;margin-bottom:6px}
 
 <section class="pr" id="menu">
   <div class="wrap">
-    <h2>ならべて天気図のメニュー</h2>
+    <h2>空読みのメニュー</h2>
     <p class="sub">まずは地上天気図から。もっと読み込みたい方には、高層・数値予報の並べ図を自動でお届けします。</p>
     <div class="plans">
       <div class="card plan free">
@@ -450,15 +529,15 @@ footer .brand{color:var(--fg);font-size:15px;margin-bottom:6px}
       <div class="card"><h3>見比べる</h3><p>左の列が48時間前・24時間前、真ん中が最新（赤枠）、右の列が24時間予想・48時間予想。矢印に沿って見るだけです。</p></div>
       <div class="card"><h3>保存する</h3><p>「PNGで保存」か「PDFで保存」を押すだけ。タブレットに入れて、解析の書き込みにも。</p></div>
     </div>
-    <p class="again"><a class="cta" href="#today">今日のならべて天気図を見る</a><a class="line-btn" href="__LINE_URL__" target="_blank" rel="noopener">高層・数値予報はLINEで自動で届く</a></p>
+    <p class="again"><a class="cta" href="#today">今日の天気図を見る</a><a class="line-btn" href="__LINE_URL__" target="_blank" rel="noopener">高層・数値予報はLINEで自動で届く</a></p>
   </div>
 </section>
 </main>
 
 <footer>
   <div class="wrap">
-    <div class="brand">ならべて天気図</div>
-    出典：気象庁ホームページ（地上天気図）を加工して作成。編集・加工の責任はならべて天気図にあります。天気図は気象庁の発表内容をそのまま並べたもので、独自の予報ではありません。
+    <div class="brand"><span class="nm">空読み<small>SORAYOMI</small></span></div>
+    出典：気象庁ホームページ（地上天気図）を加工して作成。編集・加工の責任は空読みにあります。天気図は気象庁の発表内容をそのまま並べたもので、独自の予報ではありません。
   </div>
 </footer>
 </body>
