@@ -1,4 +1,4 @@
-# 気象庁に新しい地上天気図が出たら、ページ(GitHub Pages)を作り直す。
+# 気象庁に新しい地上天気図(FSAS24・48 の初期値がそろった回)が出たら、ページを作り直して Cloudflare Pages(https://narabete-tenkizu.pages.dev/)に公開する。
 # 15分ごとに調べ、変わっていなければ数秒で終わる。手動実行で「force」を付けると必ず作り直す。
 name: update
 
@@ -14,8 +14,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
   actions: write
 
 concurrency:
@@ -28,9 +26,6 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: 385e8c929e084a811dcd4a0999cf0b2e
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -47,18 +42,9 @@ jobs:
       - name: ページを作る
         if: steps.check.outputs.changed == 'true'
         run: python build_site.py
-      - uses: actions/upload-pages-artifact@v3
+      # GitHub Pages(github.io)は 2026-10-14 にやめた。公開先は Cloudflare Pages だけ
+      - name: Cloudflare Pages に公開する
         if: steps.check.outputs.changed == 'true'
-        with:
-          path: site
-      - name: 公開する
-        id: deploy
-        if: steps.check.outputs.changed == 'true'
-        uses: actions/deploy-pages@v4
-      # 同じページを Cloudflare Pages(https://narabete-tenkizu.pages.dev/)にも出す。合鍵(CLOUDFLARE_API_TOKEN)がないときは飛ばす
-      - name: Cloudflare Pages にも公開する
-        continue-on-error: true
-        if: steps.check.outputs.changed == 'true' && env.CLOUDFLARE_API_TOKEN != ''
         run: |
           npx --yes wrangler@4.20.0 pages project create narabete-tenkizu --production-branch=main || true
           npx --yes wrangler@4.20.0 pages deploy site --project-name=narabete-tenkizu --branch=main --commit-dirty=true
